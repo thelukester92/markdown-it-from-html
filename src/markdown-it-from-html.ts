@@ -201,7 +201,6 @@ const defaultRenderRules: typeof Renderer.prototype.renderRules = {
 
     // block containing nested blocks
     blockquote: children => {
-        console.log('blockquote children', children);
         const flattened = flatten(children);
         if (flattened.length && flattened[flattened.length - 1] === '') {
             flattened.pop();
