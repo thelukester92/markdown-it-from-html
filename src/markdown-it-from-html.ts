@@ -1,5 +1,6 @@
 import Token from 'markdown-it/lib/token';
 import { ImbalancedTagsError, RenderRuleNotFoundError } from './errors';
+import { flatten, inline } from './utils';
 
 export interface RendererOpts {
     /**
@@ -22,8 +23,8 @@ export interface RendererOpts {
      * {
      *   link_open: (tokens, idx, env) => env.pushTag('a', { href: tokens[idx].attrs.find(attr => attr[0] === 'href') }),
      *   link_close: (tokens, idx, env) => {
-     *     const { attrs, content } = env.popTag();
-     *     env.pushRendered(`[${content}](${attrs.get('href')})`);
+     *     const { children, attrs } = env.popTag();
+     *     env.pushRendered(`[${inline(children)}](${attrs.get('href')})`);
      *   },
      * }
      * ```
@@ -42,7 +43,7 @@ export class Renderer {
      * For example, to render `<a>` tags:
      * ```
      * {
-     *   a: (content, _prefix, attrs) => `[${content}](${attrs.href})`,
+     *   a: (children, attrs) => `[${inline(children)}](${attrs.get('href')})`,
      * }
      * ```
      */
@@ -56,8 +57,8 @@ export class Renderer {
      * {
      *   link_open: (tokens, idx, env) => env.pushTag('a', { href: tokens[idx].attrs.find(attr => attr[0] === 'href') }),
      *   link_close: (tokens, idx, env) => {
-     *     const { attrs, content } = env.popTag();
-     *     env.pushRendered(`[${content}](${attrs.href})`);
+     *     const { children, attrs } = env.popTag();
+     *     env.pushRendered(`[${inline(children)}](${attrs.get('href')})`);
      *   },
      * }
      * ```
@@ -172,22 +173,33 @@ export class RendererEnv {
 }
 
 export interface RendererEnvStackEntry {
+    /** The html tag from the token that pushed this entry to the stack. */
     tag: string;
+
+    /** The key-value pairs of the token when this entry was pushed to the stack. */
     attrs?: Record<string, any>;
+
+    /**
+     * The rendered children for the current stack entry, built from rendering tokens further down in the DOM tree.
+     * Each element is an array of lines (to be joined with newlines) rendered for a token.
+     */
     children: string[][];
 }
 
-/** For more fine-grained control over render rules, control at the token level. `RenderRule` is enough in most cases. */
+/**
+ * For more fine-grained control over render rules, control at the token level. `RenderRule` is enough in most cases.
+ * For example, this enables a single rule to render multiple tag types, e.g. `<h1>` through `<h6>`.
+ */
 export type TokenHandlerRule = (tokens: Token[], idx: number, env: RendererEnv) => string[] | null;
 
-/** The render rule for a tag popped off the stack, or for a self-closing tag. */
+/**
+ * The render rule for a tag popped off the stack, or for a self-closing tag.
+ * Block elements should return an extra empty string `''` to force a newline after it.
+ * @param children The rendered children (each element is an array of lines).
+ * @param attrs The key-value pairs of the _opening_ token for this tag (or _the_ token, if self-closing).
+ */
 export type RenderRule = (children: string[][], attrs?: Record<string, any>) => string[];
 
-// todo: consider a children helper class with children.flatten() and children.inline()
-const flatten = (children: string[][]): string[] => ([] as string[]).concat(...children);
-const inline = (children: string[][]): string => flatten(children).join('');
-
-// todo: cleaner way to add '' between blocks and trim '' at the end
 const defaultRenderRules: typeof Renderer.prototype.renderRules = {
     // inline
     '': children => [inline(children)],
@@ -195,8 +207,6 @@ const defaultRenderRules: typeof Renderer.prototype.renderRules = {
     strong: children => [`**${inline(children)}**`],
 
     // block containing only inline
-    h1: children => [`# ${inline(children)}`, ''],
-    h2: children => [`## ${inline(children)}`, ''], // todo: use heading_open with token.markdown instead
     p: children => [`${inline(children)}`, ''],
 
     // block containing nested blocks
@@ -234,7 +244,7 @@ const defaultRenderRules: typeof Renderer.prototype.renderRules = {
                     .map(line => `    ${line}`),
             );
         }
-        rendered.push(''); // todo: note that all block elements should append an empty line to the end (?)
+        rendered.push('');
         return rendered;
     },
 
@@ -243,7 +253,7 @@ const defaultRenderRules: typeof Renderer.prototype.renderRules = {
 };
 
 const defaultTokenHandlerRules: typeof Renderer.prototype.tokenHandlerRules = {
-    // using the default rule for heading_open
+    // note: using the default rule for heading_open
     heading_close: (tokens, idx, env) => {
         const token = tokens[idx];
         const { children } = env.popTag(token.tag);
