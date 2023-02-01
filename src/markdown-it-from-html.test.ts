@@ -32,7 +32,50 @@ Some other paragraph.
 and a closing paragraph here`;
 
 describe('markdown-it-from-html', () => {
-    it('round-trips markdown, maintaining integrity', () => {
+    let md: MarkdownIt;
+    const renderer = new Renderer();
+
+    beforeEach(() => {
+        md = new MarkdownIt();
+    });
+
+    it('roundtrips h1', () => {
+        const markdown = '# test';
+        const result = renderer.render(md.parse(markdown, {}));
+        expect(result).toBe(markdown);
+    });
+
+    it('roundtrips h2', () => {
+        const markdown = '## test';
+        const result = renderer.render(md.parse(markdown, {}));
+        expect(result).toBe(markdown);
+    });
+
+    it('roundtrips h3', () => {
+        const markdown = '### test';
+        const result = renderer.render(md.parse(markdown, {}));
+        expect(result).toBe(markdown);
+    });
+
+    it('roundtrips h4', () => {
+        const markdown = '#### test';
+        const result = renderer.render(md.parse(markdown, {}));
+        expect(result).toBe(markdown);
+    });
+
+    it('roundtrips h5', () => {
+        const markdown = '##### test';
+        const result = renderer.render(md.parse(markdown, {}));
+        expect(result).toBe(markdown);
+    });
+
+    it('roundtrips h6', () => {
+        const markdown = '###### test';
+        const result = renderer.render(md.parse(markdown, {}));
+        expect(result).toBe(markdown);
+    });
+
+    it('roundtrips markdown, maintaining integrity', () => {
         const md = new MarkdownIt();
         const tokens = md.parse(testMarkdown, {});
         const result = new Renderer().render(tokens);

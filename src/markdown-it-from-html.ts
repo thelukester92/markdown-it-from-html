@@ -243,38 +243,10 @@ const defaultRenderRules: typeof Renderer.prototype.renderRules = {
 };
 
 const defaultTokenHandlerRules: typeof Renderer.prototype.tokenHandlerRules = {
-    // blockquote_open: (tokens, idx, env) => env.pushTag(tokens[idx].tag),
-    // blockquote_close: (tokens, idx, env) => env.pushRendered(flatten(env.popTag(tokens[idx].tag).children)),
-    // bullet_list_open: (tokens, idx, env) => env.pushTag(tokens[idx].tag),
-    // bullet_list_close: (tokens, idx, env) => {
-    //     const { children } = env.popTag(tokens[idx].tag);
-    //     const rendered: string[] = [];
-    //     for (const child of children) {
-    //         rendered.push(`* ${child[0]}`);
-    //         rendered.push(
-    //             ...child
-    //                 .slice(1)
-    //                 .filter(line => !!line)
-    //                 .map(line => `    ${line}`),
-    //         );
-    //     }
-    //     rendered.push(''); // all block elements should append an empty line to the end (?)
-    //     return env.pushRendered(rendered);
-    // },
-    // ordered_list_open: (tokens, idx, env) => env.pushTag(tokens[idx].tag),
-    // ordered_list_close: (tokens, idx, env) => {
-    //     const { children } = env.popTag(tokens[idx].tag);
-    //     const rendered: string[] = [];
-    //     for (const [i, child] of children.entries()) {
-    //         rendered.push(`${i + 1}. ${child[0]}`);
-    //         rendered.push(
-    //             ...child
-    //                 .slice(1)
-    //                 .filter(line => !!line)
-    //                 .map(line => `    ${line}`),
-    //         );
-    //     }
-    //     rendered.push(''); // all block elements should append an empty line to the end (?)
-    //     return env.pushRendered(rendered);
-    // },
+    // using the default rule for heading_open
+    heading_close: (tokens, idx, env) => {
+        const token = tokens[idx];
+        const { children } = env.popTag(token.tag);
+        return [`${tokens[idx].markup} ${inline(children)}`, ''];
+    },
 };
