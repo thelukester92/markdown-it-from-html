@@ -1,9 +1,9 @@
 import MarkdownIt from 'markdown-it';
-import { Renderer } from './markdown-it-from-html';
+import { MarkdownRenderer } from './markdown-renderer';
 
 describe('markdown-it-from-html', () => {
     let md: MarkdownIt;
-    const renderer = new Renderer();
+    const renderer = new MarkdownRenderer();
 
     beforeEach(() => {
         md = new MarkdownIt();

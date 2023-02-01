@@ -2,7 +2,7 @@ import Token from 'markdown-it/lib/token';
 import { ImbalancedTagsError, RenderRuleNotFoundError } from './errors';
 import { flatten, inline } from './utils';
 
-export interface RendererOpts {
+export interface MarkdownRendererOpts {
     /**
      * Rules for rendering a tag popped off the stack a self-closing tag.
      * The keys are equal to `token.tag`.
@@ -36,7 +36,7 @@ export interface RendererOpts {
  * Markdown-It Reverse Renderer that maps tokens back into markdown.
  * Use `tokenizeHtml` to map entirely from html to markdown.
  */
-export class Renderer {
+export class MarkdownRenderer {
     /**
      * Rules for rendering a tag popped off the stack a self-closing tag.
      * The keys are equal to `token.tag`.
@@ -65,7 +65,7 @@ export class Renderer {
      */
     tokenHandlerRules: Record<string, TokenHandlerRule | undefined>;
 
-    constructor(opts?: RendererOpts) {
+    constructor(opts?: MarkdownRendererOpts) {
         this.renderRules = { ...defaultRenderRules, ...opts?.renderRules };
         this.tokenHandlerRules = { ...defaultTokenHandlerRules, ...opts?.tokenHandlerRules };
     }
@@ -79,7 +79,7 @@ export class Renderer {
     }
 
     /** The default token handler, which manages the internal stack. */
-    handleToken(tokens: Token[], idx: number, env: RendererEnv): string[] | null {
+    handleToken(tokens: Token[], idx: number, env: MarkdownRendererEnv): string[] | null {
         const token = tokens[idx];
         if (token.nesting === 1) {
             const attrs = this.renderAttrs(token);
@@ -106,7 +106,7 @@ export class Renderer {
     }
 
     /** Render inline tokens. */
-    renderInline(tokens: Token[], env: RendererEnv): string[] {
+    renderInline(tokens: Token[], env: MarkdownRendererEnv): string[] {
         const children: string[] = [];
         for (const [i, token] of tokens.entries()) {
             const rule = this.tokenHandlerRules[token.type];
@@ -120,7 +120,7 @@ export class Renderer {
 
     /** Render block tokens. */
     render(tokens: Token[]): string {
-        const env = new RendererEnv();
+        const env = new MarkdownRendererEnv();
         const children: string[] = [];
         for (const [i, token] of tokens.entries()) {
             const rule = this.tokenHandlerRules[token.type];
@@ -144,18 +144,18 @@ export class Renderer {
  * If there is another `children` buffer, the rendered element is sent there.
  * If there is not, the rendered element is returned to the caller.
  */
-export class RendererEnv {
+export class MarkdownRendererEnv {
     /** The current renderer stack (the last element corresponds with the parent element). */
-    private stack: RendererEnvStackEntry[] = [];
+    private stack: MarkdownRendererEnvStackEntry[] = [];
 
     /** Pushes an open tag to the stack, creating a new `children` buffer. */
-    pushTag(tag: string, attrs?: RendererEnvStackEntry['attrs']): null {
+    pushTag(tag: string, attrs?: MarkdownRendererEnvStackEntry['attrs']): null {
         this.stack.push({ tag, attrs, children: [] });
         return null;
     }
 
     /** Pops the open tag from the stack for rendering. */
-    popTag(tag: string): RendererEnvStackEntry {
+    popTag(tag: string): MarkdownRendererEnvStackEntry {
         const top = this.stack.pop();
         if (!top || top.tag !== tag) {
             throw new ImbalancedTagsError(top?.tag, tag);
@@ -173,7 +173,7 @@ export class RendererEnv {
     }
 }
 
-export interface RendererEnvStackEntry {
+export interface MarkdownRendererEnvStackEntry {
     /** The html tag from the token that pushed this entry to the stack. */
     tag: string;
 
@@ -193,7 +193,7 @@ export interface RendererEnvStackEntry {
  * @returns An array of rendered lines to be added to the _root_, or null if added to the stack.
  *          This should probably always be in the form `return env.pushRendered(...)`.
  */
-export type TokenHandlerRule = (tokens: Token[], idx: number, env: RendererEnv) => string[] | null;
+export type TokenHandlerRule = (tokens: Token[], idx: number, env: MarkdownRendererEnv) => string[] | null;
 
 /**
  * The render rule for a tag popped off the stack, or for a self-closing tag.
@@ -204,7 +204,7 @@ export type TokenHandlerRule = (tokens: Token[], idx: number, env: RendererEnv) 
  */
 export type RenderRule = (children: string[][], attrs?: Record<string, any>) => string[];
 
-const defaultRenderRules: typeof Renderer.prototype.renderRules = {
+const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
     // inline
     '': children => [inline(children)],
     em: children => [`*${inline(children)}*`],
@@ -219,7 +219,6 @@ const defaultRenderRules: typeof Renderer.prototype.renderRules = {
         if (flattened.length && flattened[flattened.length - 1] === '') {
             flattened.pop();
         }
-        console.log(children);
         const rendered = flattened.map(child => (child ? `> ${child}` : '>'));
         rendered.push('');
         return rendered;
@@ -257,7 +256,7 @@ const defaultRenderRules: typeof Renderer.prototype.renderRules = {
     li: children => flatten(children),
 };
 
-const defaultTokenHandlerRules: typeof Renderer.prototype.tokenHandlerRules = {
+const defaultTokenHandlerRules: typeof MarkdownRenderer.prototype.tokenHandlerRules = {
     // note: using the default rule for heading_open
     heading_close: (tokens, idx, env) => {
         const token = tokens[idx];

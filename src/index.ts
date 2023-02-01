@@ -1,10 +1,17 @@
 import {
-    Renderer,
-    RendererEnv,
-    RendererEnvStackEntry,
-    RendererOpts,
+    MarkdownRenderer,
+    MarkdownRendererEnv,
+    MarkdownRendererEnvStackEntry,
+    MarkdownRendererOpts,
     RenderRule,
     TokenHandlerRule,
-} from './markdown-it-from-html';
+} from './markdown-renderer';
 
-export { Renderer, RendererEnv, RendererEnvStackEntry, RendererOpts, RenderRule, TokenHandlerRule };
+export {
+    MarkdownRenderer,
+    MarkdownRendererEnv,
+    MarkdownRendererEnvStackEntry,
+    MarkdownRendererOpts,
+    RenderRule,
+    TokenHandlerRule,
+};
