@@ -1,16 +1,19 @@
 import MarkdownIt from 'markdown-it';
+import Token from 'markdown-it/lib/token';
+import { RenderRuleNotFoundError } from './errors';
 import { MarkdownRenderer } from './markdown-renderer';
+import { flatten } from './utils';
 
 describe('markdown-it-from-html', () => {
-    let md: MarkdownIt;
-    const renderer = new MarkdownRenderer();
+    const md = new MarkdownIt();
+    let renderer: MarkdownRenderer;
 
     beforeEach(() => {
-        md = new MarkdownIt();
+        renderer = new MarkdownRenderer();
     });
 
     it('roundtrips inline styles', () => {
-        const markdown = '*this* is italic and **this** is bold, while ***this*** is both';
+        const markdown = '*this* is italic and **this** is bold, while ***this*** is both; ~~this~~ is strikethrough';
         const result = renderer.render(md.parse(markdown, {}));
         expect(result).toBe(markdown);
     });
@@ -98,6 +101,30 @@ describe('markdown-it-from-html', () => {
             'content after',
         ].join('\n');
         const result = renderer.render(md.parse(markdown, {}));
+        expect(result).toBe(markdown);
+    });
+
+    it('renders custom tokens', () => {
+        const markdown = '!!! note "Title"\n    test content';
+        const tokens: Token[] = [];
+        tokens.push(new Token('aside_open', 'aside', 1));
+        tokens[tokens.length - 1].attrPush(['title', 'Title']);
+        tokens.push(new Token('inline', '', 0));
+        tokens[tokens.length - 1].children = [new Token('text', '', 0)];
+        tokens[tokens.length - 1].children![0].content = 'test content';
+        tokens.push(new Token('aside_close', 'aside', -1));
+
+        const render = () => renderer.render(tokens);
+        expect(render).toThrowError(RenderRuleNotFoundError);
+
+        // this is a simple implementation of markdown "admonitions"
+        // see https://python-markdown.github.io/extensions/admonition/
+        renderer.renderRules.aside = (children, attrs) => [
+            `!!! note "${attrs?.title}"`,
+            ...flatten(children).map(child => `    ${child}`),
+        ];
+
+        const result = renderer.render(tokens);
         expect(result).toBe(markdown);
     });
 });

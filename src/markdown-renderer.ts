@@ -208,6 +208,7 @@ const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
     // inline
     '': children => [inline(children)],
     em: children => [`*${inline(children)}*`],
+    s: children => [`~~${inline(children)}~~`],
     strong: children => [`**${inline(children)}**`],
 
     // block containing only inline
