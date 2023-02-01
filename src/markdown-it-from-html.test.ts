@@ -1,36 +1,6 @@
 import MarkdownIt from 'markdown-it';
 import { Renderer } from './markdown-it-from-html';
 
-const testMarkdown = `## Heading
-
-A paragraph with *emphases*, *different emphases*, **bold**, and even ***bold italics***.
-
-* Unordered list item 1
-* Unordered list item 2
-    * Nested list item A
-    * Nested list item B
-* Unordered list item 3
-
-Some other paragraph.
-
-1. Ordered list item 1
-2. Ordered list item 2
-
-> a blockquote down here
->
-> with two paragraphs inside
->
-> * and a list
->     * inside a list
->
-> > and nested blockquote here
-> >
-> > with a second paragraph
->
-> foo
-
-and a closing paragraph here`;
-
 describe('markdown-it-from-html', () => {
     let md: MarkdownIt;
     const renderer = new Renderer();
@@ -39,46 +9,95 @@ describe('markdown-it-from-html', () => {
         md = new MarkdownIt();
     });
 
-    it('roundtrips h1', () => {
-        const markdown = '# test';
+    it('roundtrips inline styles', () => {
+        const markdown = '*this* is italic and **this** is bold, while ***this*** is both';
         const result = renderer.render(md.parse(markdown, {}));
         expect(result).toBe(markdown);
     });
 
-    it('roundtrips h2', () => {
-        const markdown = '## test';
+    it('roundtrips paragraphs', () => {
+        const markdown = 'paragraph one\n\nparagraph two';
         const result = renderer.render(md.parse(markdown, {}));
         expect(result).toBe(markdown);
     });
 
-    it('roundtrips h3', () => {
-        const markdown = '### test';
+    it('roundtrips headings', () => {
+        const markdown = [
+            '# heading one',
+            'paragraph',
+            '## heading two',
+            '### heading three',
+            'paragraph',
+            '#### heading four',
+            '##### heading five',
+            '###### heading six',
+            'paragraph',
+        ].join('\n\n');
         const result = renderer.render(md.parse(markdown, {}));
         expect(result).toBe(markdown);
     });
 
-    it('roundtrips h4', () => {
-        const markdown = '#### test';
+    it('roundtrips blockquotes', () => {
+        const markdown = [
+            'content before',
+            '',
+            '> single paragaph blockquote',
+            '',
+            'more content',
+            '',
+            '> ## blockquote with header',
+            '>',
+            '> and a paragraph',
+            '',
+            'more content 2',
+            '',
+            '> blockquote paragraph one',
+            '>',
+            '> blockquote paragraph two',
+            '>',
+            '> > # nested blockquote header',
+            '> >',
+            '> > nested blockquote paragraph',
+            '',
+            'content after',
+        ].join('\n');
         const result = renderer.render(md.parse(markdown, {}));
         expect(result).toBe(markdown);
     });
 
-    it('roundtrips h5', () => {
-        const markdown = '##### test';
+    it('roundtrips lists', () => {
+        const markdown = [
+            'content',
+            '',
+            '* single item list',
+            '',
+            'more content',
+            '',
+            '* list item 1',
+            '* list item 2',
+            '    * nested item A',
+            '    * nested item B',
+            '* list item 3',
+            '',
+            'more content 2',
+            '',
+            '1. ordered item 1',
+            '2. ordered item 2',
+            '    1. nested ordered item A',
+            '    2. nested ordered item B',
+            '3. ordered item 3',
+            '',
+            'more content 3',
+            '',
+            '1. ordered item 1',
+            '2. ordered item 2',
+            '    * nested unordered item A',
+            '    * nested unordered item B',
+            '3. ordered item 3',
+            '',
+            'content after',
+        ].join('\n');
         const result = renderer.render(md.parse(markdown, {}));
         expect(result).toBe(markdown);
-    });
-
-    it('roundtrips h6', () => {
-        const markdown = '###### test';
-        const result = renderer.render(md.parse(markdown, {}));
-        expect(result).toBe(markdown);
-    });
-
-    it('roundtrips markdown, maintaining integrity', () => {
-        const md = new MarkdownIt();
-        const tokens = md.parse(testMarkdown, {});
-        const result = new Renderer().render(tokens);
-        expect(result).toBe(testMarkdown);
     });
 });
