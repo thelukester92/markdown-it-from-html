@@ -4,7 +4,7 @@ import { RenderRuleNotFoundError } from './errors';
 import { MarkdownRenderer } from './markdown-renderer';
 import { flatten } from './utils';
 
-describe('markdown-it-from-html', () => {
+describe('MarkdownRenderer', () => {
     const md = new MarkdownIt();
     let renderer: MarkdownRenderer;
 
@@ -13,7 +13,13 @@ describe('markdown-it-from-html', () => {
     });
 
     it('roundtrips inline styles', () => {
-        const markdown = '*this* is italic and **this** is bold, while ***this*** is both; ~~this~~ is strikethrough';
+        const markdown = [
+            '*this* is italic',
+            'and **this** is bold',
+            'while ***this*** is both',
+            '~~this~~ is strikethrough',
+            'and [this](test) is a link',
+        ].join(' ');
         const result = renderer.render(md.parse(markdown, {}));
         expect(result).toBe(markdown);
     });
@@ -36,6 +42,12 @@ describe('markdown-it-from-html', () => {
             '###### heading six',
             'paragraph',
         ].join('\n\n');
+        const result = renderer.render(md.parse(markdown, {}));
+        expect(result).toBe(markdown);
+    });
+
+    it('roundtrips hr', () => {
+        const markdown = 'one\n\n***\n\ntwo';
         const result = renderer.render(md.parse(markdown, {}));
         expect(result).toBe(markdown);
     });

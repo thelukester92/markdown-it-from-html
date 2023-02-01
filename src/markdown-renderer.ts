@@ -204,15 +204,20 @@ export type TokenHandlerRule = (tokens: Token[], idx: number, env: MarkdownRende
  */
 export type RenderRule = (children: string[][], attrs?: Record<string, any>) => string[];
 
+// todo: make inline tokens like `<em>` respect `token.markdown`, e.g. to preserve `_` vs `*`
 const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
     // inline
     '': children => [inline(children)],
+    a: (children, attrs) => [`[${inline(children)}](${attrs?.href ?? ''})`],
     em: children => [`*${inline(children)}*`],
     s: children => [`~~${inline(children)}~~`],
     strong: children => [`**${inline(children)}**`],
 
     // block containing only inline
     p: children => [`${inline(children)}`, ''],
+
+    // self-closing block
+    hr: () => [`***`, ''],
 
     // block containing nested blocks
     blockquote: children => {

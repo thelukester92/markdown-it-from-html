@@ -15,3 +15,9 @@ export class RenderRuleNotFoundError extends Error {
         super(`no render rule found for tag "${token.tag}" (type "${token.type}")`);
     }
 }
+
+export class TagResolverNotFoundError extends Error {
+    constructor(public tag: string) {
+        super(`no tag resolver found for tag "${tag}"`);
+    }
+}
