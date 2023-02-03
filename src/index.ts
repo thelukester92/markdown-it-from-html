@@ -15,6 +15,7 @@ import {
     RenderRule,
     TokenHandlerRule,
 } from './markdown-renderer';
+import * as utils from './utils';
 
 export {
     blockTokenResolver,
@@ -30,4 +31,5 @@ export {
     RenderRule,
     selfClosingTokenResolver,
     TokenHandlerRule,
+    utils,
 };
