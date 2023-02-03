@@ -1,6 +1,6 @@
 {
   "name": "@thelukester92/markdown-it-from-html",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "license": "MIT",
   "author": "Luke Godfrey <lukeben92@gmail.com>",
   "description": "A way to reverse markdown-it, rendering HTML back to markdown.",

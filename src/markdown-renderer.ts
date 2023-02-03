@@ -13,7 +13,7 @@ export interface MarkdownRendererOpts {
      * }
      * ```
      */
-    renderRules: Record<string, RenderRule | undefined>;
+    renderRules?: Record<string, RenderRule | undefined>;
 
     /**
      * Rules for handling a token, if more fine-grained control is needed.
@@ -29,7 +29,7 @@ export interface MarkdownRendererOpts {
      * }
      * ```
      */
-    tokenHandlerRules: Record<string, TokenHandlerRule | undefined>;
+    tokenHandlerRules?: Record<string, TokenHandlerRule | undefined>;
 }
 
 /**
