@@ -214,35 +214,48 @@ export type TokenHandlerRule = (tokens: Token[], idx: number, env: MarkdownRende
  */
 export type RenderRule = (children: string[][], attrs?: Record<string, any>) => string[];
 
+export const blockRenderRule =
+    (rule: (children: string[][], attrs?: Record<string, any>) => string[]): RenderRule =>
+    (children, attrs) => {
+        const rendered = rule(children, attrs);
+        if (rendered[rendered.length - 1] !== '') {
+            // block elements always end with exactly one empty line
+            rendered.push('');
+        }
+        return rendered;
+    };
+
+export const inlineRenderRule =
+    (rule: (content: string, attrs?: Record<string, any>) => string): RenderRule =>
+    (children, attrs) =>
+        [rule(inline(children), attrs)];
+
 // todo: make inline tokens like `<em>` respect `token.markdown`, e.g. to preserve `_` vs `*`
-// todo: make a better way to enforce/recommend including '' at the end of block-type elements
-// todo: easier way to do a prefix e.g. blockquote `>` or list `    `,
+// todo: easier way to do a prefix/indent e.g. blockquote `>` or list `    `,
 //       preserving empty lines and omitting the final empty line
 const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
     // inline
-    '': children => [inline(children)],
-    a: (children, attrs) => [`[${inline(children)}](${attrs?.href ?? ''})`],
-    em: children => [`*${inline(children)}*`],
-    s: children => [`~~${inline(children)}~~`],
-    strong: children => [`**${inline(children)}**`],
+    '': inlineRenderRule(content => content),
+    a: inlineRenderRule((content, attrs) => `[${content}](${attrs?.href ?? ''})`),
+    em: inlineRenderRule(content => `*${content}*`),
+    s: inlineRenderRule(content => `~~${content}~~`),
+    strong: inlineRenderRule(content => `**${content}**`),
 
     // block containing only inline
-    p: children => [`${inline(children)}`, ''],
+    p: blockRenderRule(children => [inline(children)]),
 
     // self-closing block
-    hr: () => [`***`, ''],
+    hr: blockRenderRule(() => ['***']),
 
     // block containing nested blocks
-    blockquote: children => {
+    blockquote: blockRenderRule(children => {
         const flattened = flatten(children);
         if (flattened.length && flattened[flattened.length - 1] === '') {
             flattened.pop();
         }
-        const rendered = flattened.map(child => (child ? `> ${child}` : '>'));
-        rendered.push('');
-        return rendered;
-    },
-    ol: children => {
+        return flattened.map(child => (child ? `> ${child}` : '>'));
+    }),
+    ol: blockRenderRule(children => {
         const rendered: string[] = [];
         for (const [i, child] of children.entries()) {
             rendered.push(`${i + 1}. ${child[0]}`);
@@ -253,10 +266,9 @@ const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
                     .map(line => `    ${line}`),
             );
         }
-        rendered.push('');
         return rendered;
-    },
-    ul: children => {
+    }),
+    ul: blockRenderRule(children => {
         const rendered: string[] = [];
         for (const child of children) {
             rendered.push(`* ${child[0]}`);
@@ -267,9 +279,8 @@ const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
                     .map(line => `    ${line}`),
             );
         }
-        rendered.push('');
         return rendered;
-    },
+    }),
 
     // special cases
     li: children => flatten(children),
