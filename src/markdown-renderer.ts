@@ -111,7 +111,6 @@ export class MarkdownRenderer {
         for (const [i, token] of tokens.entries()) {
             const rule = this.tokenHandlerRules[token.type];
             const rendered = rule ? rule(tokens, i, env) : this.handleToken(tokens, i, env);
-            console.log(token.type, token.content, env);
             if (rendered) {
                 children.push(...rendered);
             }
