@@ -111,6 +111,7 @@ export class MarkdownRenderer {
         for (const [i, token] of tokens.entries()) {
             const rule = this.tokenHandlerRules[token.type];
             const rendered = rule ? rule(tokens, i, env) : this.handleToken(tokens, i, env);
+            console.log(token.type, token.content, env);
             if (rendered) {
                 children.push(...rendered);
             }
@@ -133,6 +134,10 @@ export class MarkdownRenderer {
                 children.push(...rendered);
             }
         }
+        const top = env.top();
+        if (top) {
+            throw new ImbalancedTagsError(top.tag);
+        }
         return children.join('\n').trim();
     }
 }
@@ -147,6 +152,11 @@ export class MarkdownRenderer {
 export class MarkdownRendererEnv {
     /** The current renderer stack (the last element corresponds with the parent element). */
     private stack: MarkdownRendererEnvStackEntry[] = [];
+
+    /** Peek at the top of the stack without removing it. */
+    top(): MarkdownRendererEnvStackEntry | undefined {
+        return this.stack[this.stack.length - 1];
+    }
 
     /** Pushes an open tag to the stack, creating a new `children` buffer. */
     pushTag(tag: string, attrs?: MarkdownRendererEnvStackEntry['attrs']): null {
@@ -205,6 +215,9 @@ export type TokenHandlerRule = (tokens: Token[], idx: number, env: MarkdownRende
 export type RenderRule = (children: string[][], attrs?: Record<string, any>) => string[];
 
 // todo: make inline tokens like `<em>` respect `token.markdown`, e.g. to preserve `_` vs `*`
+// todo: make a better way to enforce/recommend including '' at the end of block-type elements
+// todo: easier way to do a prefix e.g. blockquote `>` or list `    `,
+//       preserving empty lines and omitting the final empty line
 const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
     // inline
     '': children => [inline(children)],

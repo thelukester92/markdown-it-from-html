@@ -1,12 +1,15 @@
 import Token from 'markdown-it/lib/token';
 
 export class ImbalancedTagsError extends Error {
-    constructor(public expected: string | undefined, public received: string) {
-        super(
-            expected
-                ? `imbalanced tags; expected "${expected}", received "${received}"`
-                : `imbalanced tags; unexpected "${received}"`,
-        );
+    constructor(public expected?: string, public received?: string) {
+        const messageParts: string[] = [];
+        if (expected) {
+            messageParts.push(`expected "${expected}"`);
+        }
+        if (received) {
+            messageParts.push(`received "${received}"`);
+        }
+        super('imbalanced tags' + (messageParts.length ? '; ' : '') + messageParts.join(', '));
     }
 }
 

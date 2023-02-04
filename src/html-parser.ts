@@ -166,11 +166,11 @@ export const selfClosingTokenResolver =
     style => {
         if (style === 'close') {
             // a closing tag for self-closing tokens should be ignored
+            // but other styles (e.g. <br> or <br />) should have the same behavior (nesting = 0)
             return null;
         }
         const type = `${tokenType ?? tag}`;
-        const nesting = style === 'open' ? 1 : style === 'self-closing' ? 0 : -1;
-        const token = new Token(type, tag, nesting);
+        const token = new Token(type, tag, 0);
         token.block = true;
         token.markup = markup ?? '';
         return token;
