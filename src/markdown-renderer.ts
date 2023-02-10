@@ -234,7 +234,10 @@ export const inlineRenderRule =
 //       preserving empty lines and omitting the final empty line
 const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
     // inline
-    '': inlineRenderRule(content => content),
+    '': inlineRenderRule(content => {
+        // common substitution; replace this render rule to customize
+        return content.replace(/\*/g, '\\*');
+    }),
     a: inlineRenderRule((content, attrs) => `[${content}](${attrs?.href ?? ''})`),
     em: inlineRenderRule(content => `*${content}*`),
     s: inlineRenderRule(content => `~~${content}~~`),

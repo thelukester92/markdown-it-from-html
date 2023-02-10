@@ -139,4 +139,12 @@ describe('MarkdownRenderer', () => {
         const result = renderer.render(tokens);
         expect(result).toBe(markdown);
     });
+
+    // for some reason, replacing * with \* in the empty tag renderer wasn't enough?
+    it('handles escaped * correctly', () => {
+        // eslint-disable-next-line prettier/prettier
+        const markdown = 'some *emphasized*\\* text\n\n\\* note about the emphasis';
+        const result = renderer.render(md.parse(markdown, {}));
+        expect(result).toBe(markdown);
+    });
 });
