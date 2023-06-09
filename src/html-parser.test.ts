@@ -20,7 +20,7 @@ const testHtml = `<h1>Header</h1>
 
 const expectedMarkdown = `# Header
 
-Paragraph with [a link](test), *emphasis*, **strong**, and ***both***.
+Paragraph with [a link](test), _emphasis_, **strong**, and _**both**_.
 
 ***
 

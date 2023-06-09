@@ -14,9 +14,9 @@ describe('MarkdownRenderer', () => {
 
     it('roundtrips inline styles', () => {
         const markdown = [
-            '*this* is italic',
+            '_this_ is italic',
             'and **this** is bold',
-            'while ***this*** is both',
+            'while **_this_** is both',
             '~~this~~ is strikethrough',
             'and [this](test) is a link',
         ].join(' ');
@@ -140,11 +140,18 @@ describe('MarkdownRenderer', () => {
         expect(result).toBe(markdown);
     });
 
+    it('maps * to _', () => {
+        const markdown = 'some *emphasized*\\* text\n\n\\* note about the emphasis';
+        const alternate = 'some _emphasized_\\* text\n\n\\* note about the emphasis';
+        const result = renderer.render(md.parse(markdown, {}));
+        expect(result).toBe(alternate);
+    });
+
     // for some reason, replacing * with \* in the empty tag renderer wasn't enough?
     it('handles escaped * correctly', () => {
-        // eslint-disable-next-line prettier/prettier
         const markdown = 'some *emphasized*\\* text\n\n\\* note about the emphasis';
+        const alternate = 'some _emphasized_\\* text\n\n\\* note about the emphasis';
         const result = renderer.render(md.parse(markdown, {}));
-        expect(result).toBe(markdown);
+        expect(result).toBe(alternate);
     });
 });
