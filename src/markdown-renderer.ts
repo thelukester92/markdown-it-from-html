@@ -239,6 +239,7 @@ const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
     return content.replace(/\*/g, '\\*');
   }),
   a: inlineRenderRule((content, attrs) => `[${content}](${attrs?.href ?? ''})`),
+  br: inlineRenderRule((_content, attrs) => attrs?.['data-softbreak'] === 'true' ? '\n' : '  \n'),
   em: inlineRenderRule(content => `_${content}_`),
   s: inlineRenderRule(content => `~~${content}~~`),
   strong: inlineRenderRule(content => `**${content}**`),

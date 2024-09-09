@@ -25,3 +25,11 @@ const markdown = renderer.render(parser.parse(rawHtml));
 console.log(markdown);
 // results in '*test*'
 ```
+
+## Special Notes
+
+### Line Breaks (`br` tags)
+
+By default, `br` tags are converted into hard breaks (two empty spaces followed by a newline).
+To treat any tags as softbreaks in the resulting markdown, the default render rule checks for `data-softbreak="true"`.
+This can be overridden or changed in the renderer by modifying the render rule for the `br` tag.
