@@ -3,33 +3,33 @@ import { ImbalancedTagsError, RenderRuleNotFoundError } from './errors';
 import { flatten, inline } from './utils';
 
 export interface MarkdownRendererOpts {
-    /**
-     * Rules for rendering a tag popped off the stack a self-closing tag.
-     * The keys are equal to `token.tag`.
-     * For example, to render `<a>` tags:
-     * ```
-     * {
-     *   a: (children, attrs) => `[${inline(children)}](${attrs.get('href')})`,
-     * }
-     * ```
-     */
-    renderRules?: Record<string, RenderRule | undefined>;
+  /**
+   * Rules for rendering a tag popped off the stack a self-closing tag.
+   * The keys are equal to `token.tag`.
+   * For example, to render `<a>` tags:
+   * ```
+   * {
+   *   a: (children, attrs) => `[${inline(children)}](${attrs.get('href')})`,
+   * }
+   * ```
+   */
+  renderRules?: Record<string, RenderRule | undefined>;
 
-    /**
-     * Rules for handling a token, if more fine-grained control is needed.
-     * This is closer to the original markdown-it rules, but in most cases, `renderRules` is easier to use.
-     * For example, to render `<a>` tags:
-     * ```
-     * {
-     *   link_open: (tokens, idx, env) => env.pushTag('a', { href: tokens[idx].attrs.find(attr => attr[0] === 'href') }),
-     *   link_close: (tokens, idx, env) => {
-     *     const { children, attrs } = env.popTag();
-     *     env.pushRendered(`[${inline(children)}](${attrs.get('href')})`);
-     *   },
-     * }
-     * ```
-     */
-    tokenHandlerRules?: Record<string, TokenHandlerRule | undefined>;
+  /**
+   * Rules for handling a token, if more fine-grained control is needed.
+   * This is closer to the original markdown-it rules, but in most cases, `renderRules` is easier to use.
+   * For example, to render `<a>` tags:
+   * ```
+   * {
+   *   link_open: (tokens, idx, env) => env.pushTag('a', { href: tokens[idx].attrs.find(attr => attr[0] === 'href') }),
+   *   link_close: (tokens, idx, env) => {
+   *     const { children, attrs } = env.popTag();
+   *     env.pushRendered(`[${inline(children)}](${attrs.get('href')})`);
+   *   },
+   * }
+   * ```
+   */
+  tokenHandlerRules?: Record<string, TokenHandlerRule | undefined>;
 }
 
 /**
@@ -37,108 +37,108 @@ export interface MarkdownRendererOpts {
  * Use `tokenizeHtml` to map entirely from html to markdown.
  */
 export class MarkdownRenderer {
-    /**
-     * Rules for rendering a tag popped off the stack a self-closing tag.
-     * The keys are equal to `token.tag`.
-     * For example, to render `<a>` tags:
-     * ```
-     * {
-     *   a: (children, attrs) => `[${inline(children)}](${attrs.get('href')})`,
-     * }
-     * ```
-     */
-    renderRules: Record<string, RenderRule | undefined>;
+  /**
+   * Rules for rendering a tag popped off the stack a self-closing tag.
+   * The keys are equal to `token.tag`.
+   * For example, to render `<a>` tags:
+   * ```
+   * {
+   *   a: (children, attrs) => `[${inline(children)}](${attrs.get('href')})`,
+   * }
+   * ```
+   */
+  renderRules: Record<string, RenderRule | undefined>;
 
-    /**
-     * Rules for handling a token, if more fine-grained control is needed.
-     * This is closer to the original markdown-it rules, but in most cases, `renderRules` is easier to use.
-     * For example, to render `<a>` tags:
-     * ```
-     * {
-     *   link_open: (tokens, idx, env) => env.pushTag('a', { href: tokens[idx].attrs.find(attr => attr[0] === 'href') }),
-     *   link_close: (tokens, idx, env) => {
-     *     const { children, attrs } = env.popTag();
-     *     env.pushRendered(`[${inline(children)}](${attrs.get('href')})`);
-     *   },
-     * }
-     * ```
-     */
-    tokenHandlerRules: Record<string, TokenHandlerRule | undefined>;
+  /**
+   * Rules for handling a token, if more fine-grained control is needed.
+   * This is closer to the original markdown-it rules, but in most cases, `renderRules` is easier to use.
+   * For example, to render `<a>` tags:
+   * ```
+   * {
+   *   link_open: (tokens, idx, env) => env.pushTag('a', { href: tokens[idx].attrs.find(attr => attr[0] === 'href') }),
+   *   link_close: (tokens, idx, env) => {
+   *     const { children, attrs } = env.popTag();
+   *     env.pushRendered(`[${inline(children)}](${attrs.get('href')})`);
+   *   },
+   * }
+   * ```
+   */
+  tokenHandlerRules: Record<string, TokenHandlerRule | undefined>;
 
-    constructor(opts?: MarkdownRendererOpts) {
-        this.renderRules = { ...defaultRenderRules, ...opts?.renderRules };
-        this.tokenHandlerRules = { ...defaultTokenHandlerRules, ...opts?.tokenHandlerRules };
+  constructor(opts?: MarkdownRendererOpts) {
+    this.renderRules = { ...defaultRenderRules, ...opts?.renderRules };
+    this.tokenHandlerRules = { ...defaultTokenHandlerRules, ...opts?.tokenHandlerRules };
+  }
+
+  /** Render token attributes to a record. */
+  renderAttrs(token: Token): Record<string, any> | undefined {
+    return token.attrs?.reduce((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, any>);
+  }
+
+  /** The default token handler, which manages the internal stack. */
+  handleToken(tokens: Token[], idx: number, env: MarkdownRendererEnv): string[] | null {
+    const token = tokens[idx];
+    if (token.nesting === 1) {
+      const attrs = this.renderAttrs(token);
+      return env.pushTag(token.tag, attrs);
     }
 
-    /** Render token attributes to a record. */
-    renderAttrs(token: Token): Record<string, any> | undefined {
-        return token.attrs?.reduce((acc, [key, value]) => {
-            acc[key] = value;
-            return acc;
-        }, {} as Record<string, any>);
+    let attrs: Record<string, any> | undefined;
+    let children: string[][];
+    if (token.nesting === -1) {
+      // popped tag
+      ({ attrs, children } = env.popTag(token.tag));
+    } else {
+      // self-closing tag
+      attrs = this.renderAttrs(token);
+      children = token.content ? [[token.content]] : [];
     }
 
-    /** The default token handler, which manages the internal stack. */
-    handleToken(tokens: Token[], idx: number, env: MarkdownRendererEnv): string[] | null {
-        const token = tokens[idx];
-        if (token.nesting === 1) {
-            const attrs = this.renderAttrs(token);
-            return env.pushTag(token.tag, attrs);
-        }
-
-        let attrs: Record<string, any> | undefined;
-        let children: string[][];
-        if (token.nesting === -1) {
-            // popped tag
-            ({ attrs, children } = env.popTag(token.tag));
-        } else {
-            // self-closing tag
-            attrs = this.renderAttrs(token);
-            children = token.content ? [[token.content]] : [];
-        }
-
-        const rule = this.renderRules[token.tag];
-        if (!rule) {
-            throw new RenderRuleNotFoundError(token);
-        }
-        const node = rule(children, attrs);
-        return env.pushRendered(node);
+    const rule = this.renderRules[token.tag];
+    if (!rule) {
+      throw new RenderRuleNotFoundError(token);
     }
+    const node = rule(children, attrs);
+    return env.pushRendered(node);
+  }
 
-    /** Render inline tokens. */
-    renderInline(tokens: Token[], env: MarkdownRendererEnv): string[] {
-        const children: string[] = [];
-        for (const [i, token] of tokens.entries()) {
-            const rule = this.tokenHandlerRules[token.type];
-            const rendered = rule ? rule(tokens, i, env) : this.handleToken(tokens, i, env);
-            if (rendered) {
-                children.push(...rendered);
-            }
-        }
-        return children;
+  /** Render inline tokens. */
+  renderInline(tokens: Token[], env: MarkdownRendererEnv): string[] {
+    const children: string[] = [];
+    for (const [i, token] of tokens.entries()) {
+      const rule = this.tokenHandlerRules[token.type];
+      const rendered = rule ? rule(tokens, i, env) : this.handleToken(tokens, i, env);
+      if (rendered) {
+        children.push(...rendered);
+      }
     }
+    return children;
+  }
 
-    /** Render block tokens. */
-    render(tokens: Token[]): string {
-        const env = new MarkdownRendererEnv();
-        const children: string[] = [];
-        for (const [i, token] of tokens.entries()) {
-            const rule = this.tokenHandlerRules[token.type];
-            const rendered = rule
-                ? rule(tokens, i, env)
-                : token.type === 'inline'
-                ? this.renderInline(token.children ?? [], env)
-                : this.handleToken(tokens, i, env);
-            if (rendered) {
-                children.push(...rendered);
-            }
-        }
-        const top = env.top();
-        if (top) {
-            throw new ImbalancedTagsError(top.tag);
-        }
-        return children.join('\n').trim();
+  /** Render block tokens. */
+  render(tokens: Token[]): string {
+    const env = new MarkdownRendererEnv();
+    const children: string[] = [];
+    for (const [i, token] of tokens.entries()) {
+      const rule = this.tokenHandlerRules[token.type];
+      const rendered = rule
+        ? rule(tokens, i, env)
+        : token.type === 'inline'
+        ? this.renderInline(token.children ?? [], env)
+        : this.handleToken(tokens, i, env);
+      if (rendered) {
+        children.push(...rendered);
+      }
     }
+    const top = env.top();
+    if (top) {
+      throw new ImbalancedTagsError(top.tag);
+    }
+    return children.join('\n').trim();
+  }
 }
 
 /**
@@ -149,51 +149,51 @@ export class MarkdownRenderer {
  * If there is not, the rendered element is returned to the caller.
  */
 export class MarkdownRendererEnv {
-    /** The current renderer stack (the last element corresponds with the parent element). */
-    private stack: MarkdownRendererEnvStackEntry[] = [];
+  /** The current renderer stack (the last element corresponds with the parent element). */
+  private stack: MarkdownRendererEnvStackEntry[] = [];
 
-    /** Peek at the top of the stack without removing it. */
-    top(): MarkdownRendererEnvStackEntry | undefined {
-        return this.stack[this.stack.length - 1];
-    }
+  /** Peek at the top of the stack without removing it. */
+  top(): MarkdownRendererEnvStackEntry | undefined {
+    return this.stack[this.stack.length - 1];
+  }
 
-    /** Pushes an open tag to the stack, creating a new `children` buffer. */
-    pushTag(tag: string, attrs?: MarkdownRendererEnvStackEntry['attrs']): null {
-        this.stack.push({ tag, attrs, children: [] });
-        return null;
-    }
+  /** Pushes an open tag to the stack, creating a new `children` buffer. */
+  pushTag(tag: string, attrs?: MarkdownRendererEnvStackEntry['attrs']): null {
+    this.stack.push({ tag, attrs, children: [] });
+    return null;
+  }
 
-    /** Pops the open tag from the stack for rendering. */
-    popTag(tag: string): MarkdownRendererEnvStackEntry {
-        const top = this.stack.pop();
-        if (!top || top.tag !== tag) {
-            throw new ImbalancedTagsError(top?.tag, tag);
-        }
-        return top;
+  /** Pops the open tag from the stack for rendering. */
+  popTag(tag: string): MarkdownRendererEnvStackEntry {
+    const top = this.stack.pop();
+    if (!top || top.tag !== tag) {
+      throw new ImbalancedTagsError(top?.tag, tag);
     }
+    return top;
+  }
 
-    /** Push a rendered token into the current `children` buffer and return null, or return it if top-level. */
-    pushRendered(children: string[]): string[] {
-        if (this.stack.length) {
-            this.stack[this.stack.length - 1].children.push(children);
-            return [];
-        }
-        return children;
+  /** Push a rendered token into the current `children` buffer and return null, or return it if top-level. */
+  pushRendered(children: string[]): string[] {
+    if (this.stack.length) {
+      this.stack[this.stack.length - 1].children.push(children);
+      return [];
     }
+    return children;
+  }
 }
 
 export interface MarkdownRendererEnvStackEntry {
-    /** The html tag from the token that pushed this entry to the stack. */
-    tag: string;
+  /** The html tag from the token that pushed this entry to the stack. */
+  tag: string;
 
-    /** The key-value pairs of the token when this entry was pushed to the stack. */
-    attrs?: Record<string, any>;
+  /** The key-value pairs of the token when this entry was pushed to the stack. */
+  attrs?: Record<string, any>;
 
-    /**
-     * The rendered children for the current stack entry, built from rendering tokens further down in the DOM tree.
-     * Each element is an array of lines (to be joined with newlines) rendered for a token.
-     */
-    children: string[][];
+  /**
+   * The rendered children for the current stack entry, built from rendering tokens further down in the DOM tree.
+   * Each element is an array of lines (to be joined with newlines) rendered for a token.
+   */
+  children: string[][];
 }
 
 /**
@@ -214,85 +214,85 @@ export type TokenHandlerRule = (tokens: Token[], idx: number, env: MarkdownRende
 export type RenderRule = (children: string[][], attrs?: Record<string, any>) => string[];
 
 export const blockRenderRule =
-    (rule: (children: string[][], attrs?: Record<string, any>) => string[]): RenderRule =>
-    (children, attrs) => {
-        const rendered = rule(children, attrs);
-        if (rendered[rendered.length - 1] !== '') {
-            // block elements always end with exactly one empty line
-            rendered.push('');
-        }
-        return rendered;
-    };
+  (rule: (children: string[][], attrs?: Record<string, any>) => string[]): RenderRule =>
+  (children, attrs) => {
+    const rendered = rule(children, attrs);
+    if (rendered[rendered.length - 1] !== '') {
+      // block elements always end with exactly one empty line
+      rendered.push('');
+    }
+    return rendered;
+  };
 
 export const inlineRenderRule =
-    (rule: (content: string, attrs?: Record<string, any>) => string): RenderRule =>
-    (children, attrs) =>
-        [rule(inline(children), attrs)];
+  (rule: (content: string, attrs?: Record<string, any>) => string): RenderRule =>
+  (children, attrs) =>
+    [rule(inline(children), attrs)];
 
 // todo: make inline tokens like `<em>` respect `token.markdown`, e.g. to preserve `_` vs `*`
 // todo: easier way to do a prefix/indent e.g. blockquote `>` or list `    `,
 //       preserving empty lines and omitting the final empty line
 const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
-    // inline
-    '': inlineRenderRule(content => {
-        // common substitution; replace this render rule to customize
-        return content.replace(/\*/g, '\\*');
-    }),
-    a: inlineRenderRule((content, attrs) => `[${content}](${attrs?.href ?? ''})`),
-    em: inlineRenderRule(content => `_${content}_`),
-    s: inlineRenderRule(content => `~~${content}~~`),
-    strong: inlineRenderRule(content => `**${content}**`),
+  // inline
+  '': inlineRenderRule(content => {
+    // common substitution; replace this render rule to customize
+    return content.replace(/\*/g, '\\*');
+  }),
+  a: inlineRenderRule((content, attrs) => `[${content}](${attrs?.href ?? ''})`),
+  em: inlineRenderRule(content => `_${content}_`),
+  s: inlineRenderRule(content => `~~${content}~~`),
+  strong: inlineRenderRule(content => `**${content}**`),
 
-    // block containing only inline
-    p: blockRenderRule(children => [inline(children)]),
+  // block containing only inline
+  p: blockRenderRule(children => [inline(children)]),
 
-    // self-closing block
-    hr: blockRenderRule(() => ['***']),
+  // self-closing block
+  hr: blockRenderRule(() => ['***']),
 
-    // block containing nested blocks
-    blockquote: blockRenderRule(children => {
-        const flattened = flatten(children);
-        if (flattened.length && flattened[flattened.length - 1] === '') {
-            flattened.pop();
-        }
-        return flattened.map(child => (child ? `> ${child}` : '>'));
-    }),
-    ol: blockRenderRule(children => {
-        const rendered: string[] = [];
-        for (const [i, child] of children.entries()) {
-            rendered.push(`${i + 1}. ${child[0]}`);
-            rendered.push(
-                ...child
-                    .slice(1)
-                    .filter(line => !!line)
-                    .map(line => `    ${line}`),
-            );
-        }
-        return rendered;
-    }),
-    ul: blockRenderRule(children => {
-        const rendered: string[] = [];
-        for (const child of children) {
-            rendered.push(`* ${child[0]}`);
-            rendered.push(
-                ...child
-                    .slice(1)
-                    .filter(line => !!line)
-                    .map(line => `    ${line}`),
-            );
-        }
-        return rendered;
-    }),
+  // block containing nested blocks
+  blockquote: blockRenderRule(children => {
+    const flattened = flatten(children);
+    if (flattened.length && flattened[flattened.length - 1] === '') {
+      flattened.pop();
+    }
+    return flattened.map(child => (child ? `> ${child}` : '>'));
+  }),
+  ol: blockRenderRule(children => {
+    const rendered: string[] = [];
+    for (const [i, child] of children.entries()) {
+      rendered.push(`${i + 1}. ${child[0]}`);
+      rendered.push(
+        ...child
+          .slice(1)
+          .filter(line => !!line)
+          .map(line => `    ${line}`),
+      );
+    }
+    return rendered;
+  }),
+  ul: blockRenderRule(children => {
+    const rendered: string[] = [];
+    for (const child of children) {
+      rendered.push(`* ${child[0]}`);
+      rendered.push(
+        ...child
+          .slice(1)
+          .filter(line => !!line)
+          .map(line => `    ${line}`),
+      );
+    }
+    return rendered;
+  }),
 
-    // special cases
-    li: children => flatten(children),
+  // special cases
+  li: children => flatten(children),
 };
 
 const defaultTokenHandlerRules: typeof MarkdownRenderer.prototype.tokenHandlerRules = {
-    // note: using the default rule for heading_open
-    heading_close: (tokens, idx, env) => {
-        const token = tokens[idx];
-        const { children } = env.popTag(token.tag);
-        return env.pushRendered([`${tokens[idx].markup} ${inline(children)}`, '']);
-    },
+  // note: using the default rule for heading_open
+  heading_close: (tokens, idx, env) => {
+    const token = tokens[idx];
+    const { children } = env.popTag(token.tag);
+    return env.pushRendered([`${tokens[idx].markup} ${inline(children)}`, '']);
+  },
 };
