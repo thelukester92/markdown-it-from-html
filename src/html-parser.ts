@@ -38,7 +38,6 @@ export class HtmlParser {
     };
 
     while (state.pos < state.src.length) {
-      const hasWhitespace = this.consumeWhitespace(state);
       if (state.src[state.pos] === '<') {
         ++state.pos;
         const token = this.consumeTag(state);
@@ -48,9 +47,6 @@ export class HtmlParser {
           pushInlineToken(token);
         }
       } else {
-        if (hasWhitespace) {
-          --state.pos;
-        }
         pushInlineToken(this.consumeText(state));
       }
     }
@@ -71,7 +67,7 @@ export class HtmlParser {
     let tagStyle: HtmlParserTagStyle = 'open';
     if (state.src[state.pos] === '/') {
       tagStyle = 'close';
-      state.pos++;
+      ++state.pos;
     }
 
     const tag = this.consumeWord(state).toLowerCase();
@@ -89,7 +85,7 @@ export class HtmlParser {
       this.consumeWhitespace(state);
       if (state.src.startsWith('/>', state.pos)) {
         tagStyle = 'self-closing';
-        state.pos += 2;
+        ++state.pos;
         break;
       } else if (state.src[state.pos] === '>') {
         break;
