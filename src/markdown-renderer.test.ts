@@ -131,7 +131,7 @@ describe('MarkdownRenderer', () => {
 
     // this is a simple implementation of markdown "admonitions"
     // see https://python-markdown.github.io/extensions/admonition/
-    renderer.renderRules.aside = (children, attrs) => [
+    renderer.renderRules.aside = ({ children, attrs }) => [
       `!!! note "${attrs?.title}"`,
       ...flatten(children).map(child => `    ${child}`),
     ];
@@ -140,18 +140,15 @@ describe('MarkdownRenderer', () => {
     expect(result).toBe(markdown);
   });
 
-  it('maps * to _', () => {
-    const markdown = 'some *emphasized*\\* text\n\n\\* note about the emphasis';
-    const alternate = 'some _emphasized_\\* text\n\n\\* note about the emphasis';
+  it('preserves * emphasis without confusing escaped * and list-related *', () => {
+    const markdown = 'some *emphasized*\\* text\n\n\\* note about the **emphasis**';
     const result = renderer.render(md.parse(markdown, {}));
-    expect(result).toBe(alternate);
+    expect(result).toBe(markdown);
   });
 
-  // for some reason, replacing * with \* in the empty tag renderer wasn't enough?
-  it('handles escaped * correctly', () => {
-    const markdown = 'some *emphasized*\\* text\n\n\\* note about the emphasis';
-    const alternate = 'some _emphasized_\\* text\n\n\\* note about the emphasis';
+  it('preserves _ emphasis', () => {
+    const markdown = 'some _emphasized_\\* text\n\n\\* note about the __emphasis__';
     const result = renderer.render(md.parse(markdown, {}));
-    expect(result).toBe(alternate);
+    expect(result).toBe(markdown);
   });
 });

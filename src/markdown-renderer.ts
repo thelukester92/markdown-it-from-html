@@ -101,7 +101,7 @@ export class MarkdownRenderer {
     if (!rule) {
       throw new RenderRuleNotFoundError(token);
     }
-    const node = rule(children, attrs);
+    const node = rule({ token, children, attrs });
     return env.pushRendered(node);
   }
 
@@ -207,16 +207,17 @@ export type TokenHandlerRule = (tokens: Token[], idx: number, env: MarkdownRende
 /**
  * The render rule for a tag popped off the stack, or for a self-closing tag.
  * Block elements should return an extra empty string `''` to force a newline after it.
+ * @param token The token itself.
  * @param children The rendered children (each element is an array of lines).
  * @param attrs The key-value pairs of the _opening_ token for this tag (or _the_ token, if self-closing).
  * @returns An array of rendered lines, to be added to the top of the stack.
  */
-export type RenderRule = (children: string[][], attrs?: Record<string, any>) => string[];
+export type RenderRule = (args: { token: Token; children: string[][]; attrs?: Record<string, any> }) => string[];
 
 export const blockRenderRule =
-  (rule: (children: string[][], attrs?: Record<string, any>) => string[]): RenderRule =>
-  (children, attrs) => {
-    const rendered = rule(children, attrs);
+  (rule: (args: { token: Token; children: string[][]; attrs?: Record<string, any> }) => string[]): RenderRule =>
+  args => {
+    const rendered = rule(args);
     if (rendered[rendered.length - 1] !== '') {
       // block elements always end with exactly one empty line
       rendered.push('');
@@ -225,40 +226,44 @@ export const blockRenderRule =
   };
 
 export const inlineRenderRule =
-  (rule: (content: string, attrs?: Record<string, any>) => string): RenderRule =>
-  (children, attrs) =>
-    [rule(inline(children), attrs)];
+  (rule: (args: { token: Token; content: string; attrs?: Record<string, any> }) => string): RenderRule =>
+  ({ token, children, attrs }) =>
+    [rule({ token, content: inline(children), attrs })];
 
-// todo: make inline tokens like `<em>` respect `token.markdown`, e.g. to preserve `_` vs `*`
+/** A simple render rule that wraps text content in the token's markup (e.g. `**content**` or `_content_`) */
+export const wrapContentRule: RenderRule = ({ token, children }) => [
+  `${token.markup}${inline(children)}${token.markup}`,
+];
+
 // todo: easier way to do a prefix/indent e.g. blockquote `>` or list `    `,
 //       preserving empty lines and omitting the final empty line
 const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
   // inline
-  '': inlineRenderRule(content => {
+  '': inlineRenderRule(({ content }) => {
     // common substitution; replace this render rule to customize
     return content.replace(/\*/g, '\\*');
   }),
-  a: inlineRenderRule((content, attrs) => `[${content}](${attrs?.href ?? ''})`),
-  br: inlineRenderRule((_content, attrs) => attrs?.['data-softbreak'] === 'true' ? '\n' : '  \n'),
-  em: inlineRenderRule(content => `_${content}_`),
-  s: inlineRenderRule(content => `~~${content}~~`),
-  strong: inlineRenderRule(content => `**${content}**`),
+  a: inlineRenderRule(({ content, attrs }) => `[${content}](${attrs?.href ?? ''})`),
+  br: inlineRenderRule(({ attrs }) => (attrs?.['data-softbreak'] === 'true' ? '\n' : '  \n')),
+  em: wrapContentRule,
+  s: wrapContentRule,
+  strong: wrapContentRule,
 
   // block containing only inline
-  p: blockRenderRule(children => [inline(children)]),
+  p: blockRenderRule(({ children }) => [inline(children)]),
 
   // self-closing block
   hr: blockRenderRule(() => ['***']),
 
   // block containing nested blocks
-  blockquote: blockRenderRule(children => {
+  blockquote: blockRenderRule(({ children }) => {
     const flattened = flatten(children);
     if (flattened.length && flattened[flattened.length - 1] === '') {
       flattened.pop();
     }
     return flattened.map(child => (child ? `> ${child}` : '>'));
   }),
-  ol: blockRenderRule(children => {
+  ol: blockRenderRule(({ children }) => {
     const rendered: string[] = [];
     for (const [i, child] of children.entries()) {
       rendered.push(`${i + 1}. ${child[0]}`);
@@ -271,7 +276,7 @@ const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
     }
     return rendered;
   }),
-  ul: blockRenderRule(children => {
+  ul: blockRenderRule(({ children }) => {
     const rendered: string[] = [];
     for (const child of children) {
       rendered.push(`* ${child[0]}`);
@@ -286,7 +291,7 @@ const defaultRenderRules: typeof MarkdownRenderer.prototype.renderRules = {
   }),
 
   // special cases
-  li: children => flatten(children),
+  li: ({ children }) => flatten(children),
 };
 
 const defaultTokenHandlerRules: typeof MarkdownRenderer.prototype.tokenHandlerRules = {

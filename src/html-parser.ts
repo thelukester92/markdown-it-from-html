@@ -1,13 +1,17 @@
 import Token from 'markdown-it/lib/token';
-import { TagResolverNotFoundError } from './errors';
+import { MalformedClosingTagError, TagResolverNotFoundError } from './errors';
 
 export interface HtmlParserOptions {
   /** Mapping from HTML tag name to token group (block/inline) and token type. */
   tags: Record<string, HtmlParserTokenResolver | undefined>;
 }
 
-/** Mapping for a tag, by tag style (open/close), to token (or null to ignore). */
-export type HtmlParserTokenResolver = (tagStyle: HtmlParserTagStyle) => Token | null;
+/**
+ * Mapping for a tag, by tag style (open/close), to token (or null to ignore).
+ * @param tagStyle whether the current HTML tag is an open, self-closing, or close tag.
+ * @param attrs the attributes for the current HTML tag (copied from the corresponding open tag, if this is a close).
+ */
+export type HtmlParserTokenResolver = (tagStyle: HtmlParserTagStyle, attrs?: [string, string][]) => Token | null;
 
 /** HTML tag style, either open (e.g. `<strong>`), close (e.g. `</strong>`), or self-closing (e.g. `<br />`) */
 export type HtmlParserTagStyle = 'open' | 'close' | 'self-closing';
@@ -22,14 +26,13 @@ export class HtmlParser {
   }
 
   parse(html: string): Token[] {
-    const state: HtmlParserState = { pos: 0, src: html };
-    const tokens: Token[] = [];
+    const state: HtmlParserState = { pos: 0, src: html, tokens: [] };
 
     const pushInlineToken = (token: Token) => {
-      if (!tokens.length || tokens[tokens.length - 1].type !== 'inline') {
-        tokens.push(new Token('inline', '', 0));
+      if (!state.tokens.length || state.tokens[state.tokens.length - 1].type !== 'inline') {
+        state.tokens.push(new Token('inline', '', 0));
       }
-      const parent = tokens[tokens.length - 1];
+      const parent = state.tokens[state.tokens.length - 1];
       parent.children ??= [];
       parent.children.push(token);
     };
@@ -40,7 +43,7 @@ export class HtmlParser {
         ++state.pos;
         const token = this.consumeTag(state);
         if (token && token.block) {
-          tokens.push(token);
+          state.tokens.push(token);
         } else if (token && !token.block) {
           pushInlineToken(token);
         }
@@ -52,7 +55,7 @@ export class HtmlParser {
       }
     }
 
-    return tokens;
+    return state.tokens;
   }
 
   private consumeWhitespace(state: HtmlParserState): boolean {
@@ -70,12 +73,18 @@ export class HtmlParser {
       tagStyle = 'close';
       state.pos++;
     }
+
     const tag = this.consumeWord(state).toLowerCase();
     const tagResolver = this.tags[tag];
     if (!tagResolver) {
       throw new TagResolverNotFoundError(tag);
     }
-    const attrs: [string, string][] = [];
+
+    if (tagStyle === 'close' && state.src[state.pos] !== '>') {
+      throw new MalformedClosingTagError();
+    }
+
+    let attrs: [string, string][] = [];
     while (state.pos < state.src.length && state.src[state.pos] !== '>') {
       this.consumeWhitespace(state);
       if (state.src.startsWith('/>', state.pos)) {
@@ -100,8 +109,22 @@ export class HtmlParser {
     if (state.src[state.pos] === '>') {
       ++state.pos;
     }
-    const token = tagResolver(tagStyle);
-    if (token) {
+
+    // scan back in the stack for a corresponding open tag for copying attributes
+    const currentToken = state.tokens[state.tokens.length - 1];
+    if (tagStyle === 'close' && currentToken.type === 'inline') {
+      const currentTokenChildren = currentToken.children ?? [];
+      for (let i = currentTokenChildren.length - 1; i >= 0; --i) {
+        if (currentTokenChildren[i].type === `${tag}_open`) {
+          attrs = currentTokenChildren[i].attrs ?? [];
+          break;
+        }
+      }
+    }
+
+    const token = tagResolver(tagStyle, attrs);
+    if (token && tagStyle !== 'close') {
+      // todo: determine if it would really bad to include attrs on closing tags
       token.attrs = attrs;
     }
     return token;
@@ -140,45 +163,51 @@ export class HtmlParser {
   }
 }
 
-export const blockTokenResolver =
-  (tag: string, tokenPrefix?: string, markup?: string): HtmlParserTokenResolver =>
-  style => {
+const resolveMarkup = (markup?: string | string[], attrs?: [string, string][]): string => {
+  const allowedMarkup = Array.isArray(markup) ? markup : markup ? [markup] : undefined;
+  if (!allowedMarkup?.length) {
+    return '';
+  }
+  const attrMarkup = attrs?.find(x => x[0] === 'data-markup')?.[1] ?? '';
+  return allowedMarkup.includes(attrMarkup) ? attrMarkup : allowedMarkup[0];
+};
+
+export const inlineTokenResolver =
+  (tag: string, tokenPrefix?: string, markup?: string | string[]): HtmlParserTokenResolver =>
+  (style, attrs) => {
     const type = `${tokenPrefix ?? tag}_${style}`;
     const nesting = style === 'open' ? 1 : style === 'self-closing' ? 0 : -1;
     const token = new Token(type, tag, nesting);
-    token.block = true;
-    token.markup = markup ?? '';
+    token.markup = resolveMarkup(markup, attrs);
     return token;
   };
 
-export const inlineTokenResolver =
-  (tag: string, tokenPrefix?: string, markup?: string): HtmlParserTokenResolver =>
-  style => {
-    const type = `${tokenPrefix ?? tag}_${style}`;
-    const nesting = style === 'open' ? 1 : style === 'self-closing' ? 0 : -1;
-    const token = new Token(type, tag, nesting);
-    token.markup = markup ?? '';
+export const blockTokenResolver =
+  (tag: string, tokenPrefix?: string, markup?: string | string[]): HtmlParserTokenResolver =>
+  (style, attrs) => {
+    const token = inlineTokenResolver(tag, tokenPrefix, markup)(style, attrs);
+    token!.block = true;
     return token;
   };
 
 export const selfClosingTokenResolver =
-  (tag: string, tokenType?: string, markup?: string): HtmlParserTokenResolver =>
-  style => {
+  (tag: string, tokenType?: string, markup?: string | string[]): HtmlParserTokenResolver =>
+  (style, attrs) => {
     if (style === 'close') {
       // a closing tag for self-closing tokens should be ignored
       // but other styles (e.g. <br> or <br />) should have the same behavior (nesting = 0)
       return null;
     }
-    const type = `${tokenType ?? tag}`;
-    const token = new Token(type, tag, 0);
-    token.block = true;
-    token.markup = markup ?? '';
+    const token = blockTokenResolver(tag, tokenType, markup)(style, attrs);
+    token!.type = tokenType ?? tag;
+    token!.nesting = 0;
     return token;
   };
 
 interface HtmlParserState {
   pos: number;
   src: string;
+  tokens: Token[];
 }
 
 const wordCharacterRegex = /^[A-Z0-9-]/i;
@@ -186,9 +215,9 @@ const wordCharacterRegex = /^[A-Z0-9-]/i;
 const defaultTags: Record<string, HtmlParserTokenResolver> = {
   // inline
   a: inlineTokenResolver('a'),
-  em: inlineTokenResolver('em', 'em', '*'),
+  em: inlineTokenResolver('em', 'em', ['_', '*']),
   s: inlineTokenResolver('s', 's', '~~'),
-  strong: inlineTokenResolver('strong', 'strong', '**'),
+  strong: inlineTokenResolver('strong', 'strong', ['**', '__']),
 
   // block
   blockquote: blockTokenResolver('blockquote'),

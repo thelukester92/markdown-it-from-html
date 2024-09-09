@@ -13,6 +13,12 @@ export class ImbalancedTagsError extends Error {
   }
 }
 
+export class MalformedClosingTagError extends Error {
+  constructor() {
+    super('malformed closing tag');
+  }
+}
+
 export class RenderRuleNotFoundError extends Error {
   constructor(public token: Token) {
     super(`no render rule found for tag "${token.tag}" (type "${token.type}")`);
