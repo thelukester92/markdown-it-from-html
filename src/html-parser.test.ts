@@ -4,6 +4,7 @@ import { MarkdownRenderer } from './markdown-renderer';
 const testHtml = `<h1>Header</h1>
 <p>Paragraph with <a href="test">a link</a>, <em>emphasis</em>, <strong>strong</strong>, and <em><strong>both</strong></em>.</p>
 <hr />
+<p>What if there is, in sequence, <em>emphasis followed immediately by</em> <strong>strong</strong>?</p>
 <ul>
     <li>
         <p>with lists</p>
@@ -23,6 +24,8 @@ const expectedMarkdown = `# Header
 Paragraph with [a link](test), _emphasis_, **strong**, and _**both**_.
 
 ***
+
+What if there is, in sequence, _emphasis followed immediately by_ **strong**?
 
 * with lists
 * and nested lists

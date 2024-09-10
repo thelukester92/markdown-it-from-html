@@ -38,7 +38,16 @@ export class HtmlParser {
     };
 
     while (state.pos < state.src.length) {
+      const whitespaceConsumed = this.consumeWhitespace(state);
       if (state.src[state.pos] === '<') {
+        // if there was any whitespace before the tag, it becomes a single space of text content
+        if (whitespaceConsumed && state.tokens[state.tokens.length - 1].type === 'inline') {
+          const token = new Token('text', '', 0);
+          token.content = ' ';
+          pushInlineToken(token);
+        }
+
+        // consume the tag
         ++state.pos;
         const token = this.consumeTag(state);
         if (token && token.block) {
@@ -47,6 +56,10 @@ export class HtmlParser {
           pushInlineToken(token);
         }
       } else {
+        // if there was any whitespace consumed, put a single space back to be included as text content
+        if (whitespaceConsumed) {
+          --state.pos;
+        }
         pushInlineToken(this.consumeText(state));
       }
     }
@@ -54,6 +67,7 @@ export class HtmlParser {
     return state.tokens;
   }
 
+  /** Consumes leading whitespace and returns whether any was consumed. */
   private consumeWhitespace(state: HtmlParserState): boolean {
     let consumed = false;
     while (state.pos < state.src.length && (state.src[state.pos] === ' ' || state.src[state.pos] === '\n')) {
