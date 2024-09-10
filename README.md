@@ -41,3 +41,10 @@ By default, the HTML parser will use `_underscore_` for `<em>` tags and `**doubl
 To set this value on a per-tag basis, the parser will respect the `data-markup` attribute of these tags.
 For example, `<em data-markup="*">` will result in `*single asterisk italics*`, and `<strong data-markup="__">` will result in `__double underscore bold__`.
 Only `_` and `*` are allowed for `em`, and only `__` and `**` are allowed for `strong`.
+
+### Tables
+
+This library currently supports rendering basic tables, with the following restrictions:
+
+* No table headers (or alignment)
+* Single-line cell content only

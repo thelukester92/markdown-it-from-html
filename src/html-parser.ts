@@ -227,8 +227,15 @@ const defaultTags: Record<string, HtmlParserTokenResolver> = {
   ol: blockTokenResolver('ol', 'ordered_list'),
   p: blockTokenResolver('p', 'paragraph'),
   ul: blockTokenResolver('ul', 'bullet_list'),
+  table: blockTokenResolver('table'),
+  colgroup: blockTokenResolver('colgroup'),
+  tbody: blockTokenResolver('tbody'),
+  tr: blockTokenResolver('tr'),
+  th: blockTokenResolver('th'),
+  td: blockTokenResolver('td'),
 
   // self-closing
   br: selfClosingTokenResolver('br'),
   hr: selfClosingTokenResolver('hr', 'hr', '***'),
+  col: selfClosingTokenResolver('col'),
 };
