@@ -4,7 +4,7 @@ import { flatten, inline } from './utils';
 
 export interface MarkdownRendererOpts {
   /**
-   * Rules for rendering a tag popped off the stack a self-closing tag.
+   * Rules for rendering a tag popped off the stack or a self-closing tag.
    * The keys are equal to `token.tag`.
    * For example, to render `<a>` tags:
    * ```
