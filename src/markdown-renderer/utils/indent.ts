@@ -13,7 +13,8 @@ export interface IndentOpts {
 }
 
 /** Indent or prefix each line. */
-export const indent = (lines: string[], opts?: IndentOpts): string[] => {
+export const indent = (children: string[], opts?: IndentOpts): string[] => {
+  const lines = children.flatMap(child => child.split('\n'));
   const prefix = opts?.prefix ?? '    ';
   const space = opts?.addSpace ? ' ' : '';
   const filteredLines = opts?.skipEmpty ? lines.filter(x => Boolean(x)) : lines;

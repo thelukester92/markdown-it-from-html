@@ -16,11 +16,7 @@ export const renderRules: Record<string, RenderRule> = {
     const mapping = (tr: string[]) => '| ' + tr.map((col, i) => col.padEnd(colWidths[i], ' ')).join(' | ') + ' |';
     const headingDivider = '|-' + colWidths.map(w => ''.padEnd(w, '-')).join('-|-') + '-|';
 
-    return [
-      ...thead.map(mapping),
-      ...(thead.length ? [headingDivider] : []),
-      ...tbody.map(mapping),
-    ];
+    return [...thead.map(mapping), ...(thead.length ? [headingDivider] : []), ...tbody.map(mapping)];
   }),
   colgroup: () => [],
   col: () => [],
