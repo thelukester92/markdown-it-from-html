@@ -1,11 +1,20 @@
 import { RenderRule } from '../types';
 import { blockRenderRule, inline, inlineRenderRule, wrapContentRule } from '../utils';
 
+export const commonSubstitutions: [RegExp, string][] = [
+  [/\*/g, '\\*'],
+  [/&#x27;/g, `'`],
+  [/&quot;/g, `"`],
+];
+
 export const renderRules: Record<string, RenderRule> = {
   // inline
   '': inlineRenderRule(({ content }) => {
-    // common substitution; replace this render rule to customize
-    return content.replace(/\*/g, '\\*');
+    let result = content;
+    for (const [find, replace] of commonSubstitutions) {
+      result = result.replace(find, replace);
+    }
+    return result;
   }),
   a: inlineRenderRule(({ content, attrs }) => `[${content}](${attrs?.href ?? ''})`),
   br: inlineRenderRule(({ attrs }) => (attrs?.['data-softbreak'] === 'true' ? '\n' : '  \n')),
