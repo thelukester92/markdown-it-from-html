@@ -1,6 +1,6 @@
 import MarkdownIt from 'markdown-it';
 import Token from 'markdown-it/lib/token';
-import { RenderRuleNotFoundError } from './errors';
+import { RenderRuleNotFoundError } from '../errors';
 import { MarkdownRenderer } from './markdown-renderer';
 import { flatten } from './utils';
 
