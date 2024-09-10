@@ -243,6 +243,7 @@ const defaultTags: Record<string, HtmlParserTokenResolver> = {
   ul: blockTokenResolver('ul', 'bullet_list'),
   table: blockTokenResolver('table'),
   colgroup: blockTokenResolver('colgroup'),
+  thead: blockTokenResolver('thead'),
   tbody: blockTokenResolver('tbody'),
   tr: blockTokenResolver('tr'),
   th: blockTokenResolver('th'),
