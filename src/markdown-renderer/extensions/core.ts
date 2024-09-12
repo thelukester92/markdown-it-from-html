@@ -32,5 +32,5 @@ export const renderRules: Record<string, RenderRule> = {
   p: blockRenderRule(({ children }) => [inline(children)]),
 
   // self-closing block
-  hr: blockRenderRule(() => ['***']),
+  hr: blockRenderRule(({ token }) => [token.markup]),
 };

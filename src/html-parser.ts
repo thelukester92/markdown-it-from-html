@@ -252,6 +252,6 @@ const defaultTags: Record<string, HtmlParserTokenResolver> = {
   // self-closing
   br: selfClosingTokenResolver('br'),
   col: selfClosingTokenResolver('col'),
-  hr: selfClosingTokenResolver('hr', 'hr', '***'),
+  hr: selfClosingTokenResolver('hr', 'hr', ['***', '---']),
   img: selfClosingTokenResolver('img'),
 };
