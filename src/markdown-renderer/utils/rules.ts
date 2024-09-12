@@ -7,8 +7,9 @@ export const blockRenderRule =
   (rule: (args: { token: Token; children: string[][]; attrs?: Record<string, any> }) => string[]): RenderRule =>
   args => {
     const rendered = rule(args);
-    if (rendered[rendered.length - 1] !== '') {
+    if (rendered[rendered.length - 1] !== '' || rendered.length === 1) {
       // block elements always end with exactly one empty line
+      // (or two, if there is only one line of content and it is empty)
       rendered.push('');
     }
     return rendered;
